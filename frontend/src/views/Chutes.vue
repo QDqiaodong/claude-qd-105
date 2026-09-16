@@ -1,42 +1,46 @@
 <template>
   <div>
-    <el-card shadow="never">
-      <div style="display:flex;gap:12px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
-        <el-select v-model="filters.status" placeholder="全部状态" clearable style="width:130px">
-          <el-option label="启用" value="启用" />
-          <el-option label="停用" value="停用" />
-          <el-option label="维修" value="维修" />
-        </el-select>
-        <el-input v-model="filters.area" placeholder="片区" clearable style="width:140px" />
-        <el-input v-model="filters.keyword" placeholder="格口编号" clearable style="width:150px" />
-        <el-button type="primary" @click="load">查询</el-button>
-        <el-button @click="openCreate">新增格口</el-button>
+    <div class="top">
+      <span class="ttl">格口分布图</span>
+      <input v-model="keyword" class="s" placeholder="搜格口 / 片区" />
+      <span class="grow" />
+      <span class="legend">
+        <i class="lg-启用"></i>启用
+        <i class="lg-停用"></i>停用
+        <i class="lg-维修"></i>维修
+      </span>
+      <span class="add" @click="openCreate">＋ 新增格口</span>
+    </div>
+
+    <div class="map">
+      <div
+        v-for="c in shown"
+        :key="c.id"
+        class="cell"
+        :class="'s-' + c.status"
+        @click="openEdit(c)"
+      >
+        <div class="ccode">{{ c.code }}</div>
+        <div class="carea">{{ c.area }}</div>
+        <div class="ccap">{{ c.capacity }} 件</div>
+        <div v-if="running(c.id)" class="crun">{{ running(c.id) }} 批未完</div>
       </div>
+    </div>
 
-      <el-table :data="rows" border stripe>
-        <el-table-column prop="code" label="格口" width="100" />
-        <el-table-column prop="area" label="片区" width="120" />
-        <el-table-column prop="capacity" label="容量(件)" width="110" />
-        <el-table-column label="未完成批次" width="130">
-          <template #default="{ row }">{{ running(row.id) }}</template>
-        </el-table-column>
-        <el-table-column prop="status" label="状态" width="100">
-          <template #default="{ row }">
-            <el-tag :type="row.status === '启用' ? 'success' : row.status === '维修' ? 'danger' : 'info'">
-              {{ row.status }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="90">
-          <template #default="{ row }">
-            <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-card>
+    <div class="stat">
+      共 {{ shown.length }} 个格口
+      <span class="sep">|</span>
+      启用 {{ count('启用') }}
+      <span class="sep">|</span>
+      停用 {{ count('停用') }}
+      <span class="sep">|</span>
+      维修 {{ count('维修') }}
+      <span class="grow" />
+      <span class="nodata">点任意一个格口可以改它的片区、容量和状态</span>
+    </div>
 
-    <el-dialog v-model="visible" :title="form.id ? '编辑格口' : '新增格口'" width="450px">
-      <el-form label-width="106px">
+    <el-dialog v-model="visible" :title="form.id ? '编辑格口' : '新增格口'" width="440px">
+      <el-form label-width="96px">
         <el-form-item label="格口编号">
           <el-input v-model="form.code" :disabled="!!form.id" placeholder="如 C-06" />
         </el-form-item>
@@ -63,24 +67,35 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { chuteApi, batchApi } from '../api'
 
 const rows = ref([])
-const allBatches = ref([])
-const filters = ref({ status: '', area: '', keyword: '' })
+const batches = ref([])
+const keyword = ref('')
 const visible = ref(false)
 const form = ref({})
 
+const shown = computed(() => {
+  const k = keyword.value.trim()
+  return rows.value.filter(
+    (c) => !k || (c.code || '').includes(k) || (c.area || '').includes(k)
+  )
+})
+
 function running(chuteId) {
-  return allBatches.value.filter((b) => b.chuteId === chuteId && b.status !== '已完成').length
+  return batches.value.filter((b) => b.chuteId === chuteId && b.status !== '已完成').length
+}
+
+function count(status) {
+  return shown.value.filter((c) => c.status === status).length
 }
 
 async function load() {
   try {
-    rows.value = await chuteApi.list({ ...filters.value })
-    allBatches.value = await batchApi.list({})
+    rows.value = await chuteApi.list({})
+    batches.value = await batchApi.list({})
   } catch (e) {
     ElMessage.error(e.message)
   }
@@ -113,3 +128,133 @@ async function save() {
 
 onMounted(load)
 </script>
+
+<style scoped>
+.top {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.ttl {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.s {
+  width: 200px;
+  border: 1px solid var(--el-border-color);
+  border-radius: 4px;
+  padding: 7px 11px;
+  font-size: 13px;
+  outline: none;
+}
+.s:focus {
+  border-color: var(--el-color-primary);
+}
+.grow {
+  flex: 1;
+}
+.legend {
+  font-size: 12px;
+  color: #909399;
+}
+.legend i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin: 0 5px 0 12px;
+  vertical-align: middle;
+}
+.lg-启用 {
+  background: var(--el-color-primary);
+}
+.lg-停用 {
+  background: #c0c4cc;
+}
+.lg-维修 {
+  background: #f56c6c;
+}
+.add {
+  font-size: 13px;
+  color: var(--el-color-primary);
+  cursor: pointer;
+  user-select: none;
+}
+.add:hover {
+  text-decoration: underline;
+}
+.map {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+}
+.cell {
+  aspect-ratio: 1 / 0.86;
+  border-radius: 8px;
+  padding: 13px 14px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid transparent;
+  transition: transform 0.15s, box-shadow 0.15s;
+  background: #fff;
+  border-color: #ebeef5;
+}
+.cell:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 16px rgba(0, 0, 0, 0.08);
+}
+.cell.s-启用 {
+  background: var(--el-color-primary-light-9);
+  border-color: var(--el-color-primary-light-7);
+}
+.cell.s-停用 {
+  background: #fafafa;
+  opacity: 0.6;
+}
+.cell.s-维修 {
+  background: #fef0f0;
+  border-color: #fbc4c4;
+}
+.ccode {
+  font-family: monospace;
+  font-size: 15px;
+  font-weight: 700;
+  color: #303133;
+}
+.carea {
+  font-size: 13px;
+  margin: 5px 0 auto;
+  color: #606266;
+}
+.ccap {
+  font-size: 11px;
+  color: #909399;
+  font-family: monospace;
+}
+.crun {
+  margin-top: 6px;
+  font-size: 11px;
+  color: #e6a23c;
+}
+.stat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  font-size: 12px;
+  color: #909399;
+}
+.stat .sep {
+  color: #dcdfe6;
+}
+.stat .grow {
+  flex: 1;
+}
+.nodata {
+  color: #c0c4cc;
+}
+</style>

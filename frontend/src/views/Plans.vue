@@ -1,50 +1,59 @@
 <template>
   <div>
-    <el-card shadow="never">
-      <div style="display:flex;gap:12px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
-        <el-select v-model="filters.batchId" placeholder="全部批次" clearable style="width:190px">
-          <el-option v-for="b in batches" :key="b.id" :label="`${b.code}（${b.status}）`" :value="b.id" />
-        </el-select>
-        <el-select v-model="filters.status" placeholder="全部状态" clearable style="width:130px">
-          <el-option label="待装车" value="待装车" />
-          <el-option label="已发车" value="已发车" />
-        </el-select>
-        <el-button type="primary" @click="load">查询</el-button>
-        <el-button @click="openCreate">开装车单</el-button>
+    <div class="top">
+      <span class="ttl">发车时刻表</span>
+      <span class="hint">按发车日期排，一行一趟车</span>
+      <span class="grow" />
+      <span class="add" @click="openCreate">＋ 开装车单</span>
+    </div>
+
+    <div class="tt">
+      <div class="tt-head">
+        <span class="c1">发车日</span>
+        <span class="c2">目的地</span>
+        <span class="c3">车 / 货</span>
+        <span class="c4">状态</span>
+        <span class="c5">操作</span>
       </div>
 
-      <el-table :data="rows" border stripe>
-        <el-table-column prop="code" label="单号" width="120" />
-        <el-table-column label="批次" width="120">
-          <template #default="{ row }">{{ batchCode(row.batchId) }}</template>
-        </el-table-column>
-        <el-table-column prop="plateNo" label="车牌" width="120" />
-        <el-table-column prop="destination" label="目的地" min-width="150" />
-        <el-table-column prop="quantity" label="件数" width="90" />
-        <el-table-column prop="loadDate" label="装车日期" width="120" />
-        <el-table-column prop="status" label="状态" width="100">
-          <template #default="{ row }">
-            <el-tag :type="row.status === '已发车' ? 'success' : 'warning'">{{ row.status }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="100">
-          <template #default="{ row }">
-            <el-button v-if="row.status === '待装车'" link type="primary" @click="depart(row)">
-              发车
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-card>
+      <div v-for="p in rows" :key="p.id" class="tt-row" :class="{ sent: p.status === '已发车' }">
+        <div class="c1">
+          <b>{{ day(p.loadDate) }}</b>
+          <i>{{ mon(p.loadDate) }}</i>
+        </div>
+        <div class="c2">
+          <div class="dest">{{ p.destination }}</div>
+          <div class="code">{{ p.code }}</div>
+        </div>
+        <div class="c3">
+          <div class="plate">{{ p.plateNo }}</div>
+          <div class="load">{{ p.quantity }} 件 · {{ batchCode(p.batchId) }} · {{ p.operator }}</div>
+        </div>
+        <div class="c4">
+          <span class="pill" :class="p.status === '已发车' ? 'done' : 'wait'">{{ p.status }}</span>
+        </div>
+        <div class="c5">
+          <button v-if="p.status === '待装车'" class="depart" @click="depart(p)">发　车</button>
+          <span v-else class="sentmark">已发车</span>
+        </div>
+      </div>
 
-    <el-dialog v-model="visible" title="开装车单" width="470px">
+      <div v-if="!rows.length" class="none">还没有装车单</div>
+    </div>
+
+    <el-dialog v-model="visible" title="开装车单" width="460px">
       <el-form label-width="106px">
         <el-form-item label="单号">
           <el-input v-model="form.code" placeholder="如 LP-0903" />
         </el-form-item>
-        <el-form-item label="批次">
+        <el-form-item label="装哪个批次">
           <el-select v-model="form.batchId" style="width:100%">
-            <el-option v-for="b in batches" :key="b.id" :label="`${b.code}（${b.status}，${b.quantity}件）`" :value="b.id" />
+            <el-option
+              v-for="b in batches"
+              :key="b.id"
+              :label="`${b.code}（${b.status}，${b.quantity} 件）`"
+              :value="b.id"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="车牌">
@@ -78,10 +87,15 @@ import { planApi, batchApi } from '../api'
 
 const rows = ref([])
 const batches = ref([])
-const filters = ref({ batchId: null, status: '' })
 const visible = ref(false)
 const form = ref({})
 
+function day(d) {
+  return d ? d.slice(8) : '--'
+}
+function mon(d) {
+  return d ? d.slice(5, 7) + ' 月' : ''
+}
 function batchCode(id) {
   const hit = batches.value.find((b) => b.id === id)
   return hit ? hit.code : id
@@ -89,7 +103,8 @@ function batchCode(id) {
 
 async function load() {
   try {
-    rows.value = await planApi.list({ ...filters.value })
+    const list = await planApi.list({})
+    rows.value = [...list].sort((a, b) => String(b.loadDate).localeCompare(String(a.loadDate)))
   } catch (e) {
     ElMessage.error(e.message)
   }
@@ -119,9 +134,9 @@ async function save() {
   }
 }
 
-async function depart(row) {
+async function depart(p) {
   try {
-    await planApi.depart(row.id)
+    await planApi.depart(p.id)
     ElMessage.success('已发车')
     await load()
   } catch (e) {
@@ -134,3 +149,157 @@ onMounted(async () => {
   await load()
 })
 </script>
+
+<style scoped>
+.top {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.ttl {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.hint {
+  font-size: 12px;
+  color: #909399;
+}
+.grow {
+  flex: 1;
+}
+.add {
+  font-size: 13px;
+  color: var(--el-color-primary);
+  cursor: pointer;
+  user-select: none;
+}
+.add:hover {
+  text-decoration: underline;
+}
+.tt {
+  background: #fff;
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.c1 {
+  width: 86px;
+  flex: none;
+}
+.c2 {
+  width: 230px;
+  flex: none;
+}
+.c3 {
+  flex: 1;
+  min-width: 200px;
+}
+.c4 {
+  width: 110px;
+  flex: none;
+}
+.c5 {
+  width: 120px;
+  flex: none;
+  text-align: right;
+}
+.tt-head {
+  display: flex;
+  gap: 20px;
+  padding: 10px 20px;
+  background: #fafbfc;
+  border-bottom: 1px solid #ebeef5;
+  font-size: 12px;
+  color: #909399;
+}
+.tt-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 14px 20px;
+  border-bottom: 1px solid #f5f7fa;
+}
+.tt-row:last-child {
+  border-bottom: none;
+}
+.tt-row:hover {
+  background: #fafcff;
+}
+.tt-row.sent {
+  opacity: 0.72;
+}
+.tt-row .c1 {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+.c1 b {
+  font-size: 25px;
+  line-height: 1;
+  font-family: monospace;
+  color: #303133;
+}
+.c1 i {
+  font-style: normal;
+  font-size: 11px;
+  color: #909399;
+}
+.dest {
+  font-size: 14px;
+  font-weight: 600;
+}
+.code {
+  font-size: 11px;
+  color: #a8abb2;
+  font-family: monospace;
+  margin-top: 3px;
+}
+.plate {
+  font-family: monospace;
+  font-size: 13px;
+  color: #606266;
+}
+.load {
+  font-size: 11px;
+  color: #a8abb2;
+  margin-top: 3px;
+}
+.pill {
+  font-size: 12px;
+  border-radius: 9px;
+  padding: 2px 10px;
+}
+.pill.wait {
+  background: #fdf6ec;
+  color: #b88230;
+}
+.pill.done {
+  background: #f0f9eb;
+  color: #529b2e;
+}
+.depart {
+  border: none;
+  background: var(--el-color-primary);
+  color: #fff;
+  border-radius: 4px;
+  padding: 7px 20px;
+  font-size: 13px;
+  letter-spacing: 2px;
+  cursor: pointer;
+}
+.depart:hover {
+  filter: brightness(1.08);
+}
+.sentmark {
+  font-size: 12px;
+  color: #67c23a;
+}
+.none {
+  text-align: center;
+  color: #c0c4cc;
+  font-size: 13px;
+  padding: 50px 0;
+}
+</style>
