@@ -28,6 +28,13 @@ export const planApi = {
   depart: (id) => http.post(`/plans/${id}/depart`)
 }
 
+export const bagApi = {
+  list: (params) => http.get('/bags', { params }),
+  open: (data) => http.post('/bags', data),
+  tearDown: (id) => http.post(`/bags/${id}/teardown`),
+  updateQuantity: (id, quantity) => http.put(`/bags/${id}/quantity`, null, { params: { quantity } })
+}
+
 export const exceptionApi = {
   list: (params) => http.get('/exceptions', { params }),
   create: (data) => http.post('/exceptions', data),

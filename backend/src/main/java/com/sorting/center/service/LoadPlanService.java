@@ -14,10 +14,13 @@ public class LoadPlanService {
 
     private final LoadPlanRepository plans;
     private final SortBatchRepository batches;
+    private final TransitBagService bagService;
 
-    public LoadPlanService(LoadPlanRepository plans, SortBatchRepository batches) {
+    public LoadPlanService(LoadPlanRepository plans, SortBatchRepository batches,
+                           TransitBagService bagService) {
         this.plans = plans;
         this.batches = batches;
+        this.bagService = bagService;
     }
 
     public List<LoadPlan> list(Long batchId, String status) {
@@ -71,11 +74,16 @@ public class LoadPlanService {
 
     @Transactional
     public LoadPlan depart(Long id) {
-        LoadPlan plan = plans.findById(id).orElseThrow(() -> new BizException("装车单不存在"));
+        // 锁住装车单行：与正在开袋/拆袋/改件数的事务互斥，不会出现发车后还挂上新袋。
+        LoadPlan plan = plans.findByIdForUpdate(id)
+                .orElseThrow(() -> new BizException("装车单不存在"));
         if (!"待装车".equals(plan.status)) {
             throw new BizException("这单已经发过车了");
         }
         plan.status = "已发车";
-        return plans.save(plan);
+        LoadPlan saved = plans.save(plan);
+        // 发车即冻结：挂上的袋全部转成已发车，之后改件数、拆袋都被挡住。
+        bagService.freezeByPlan(saved);
+        return saved;
     }
 }

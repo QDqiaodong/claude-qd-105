@@ -28,6 +28,7 @@
         <div class="c3">
           <div class="plate">{{ p.plateNo }}</div>
           <div class="load">{{ p.quantity }} 件 · {{ batchCode(p.batchId) }} · {{ p.operator }}</div>
+          <div class="bags">中转袋 {{ bagSummary(p.id) }}</div>
         </div>
         <div class="c4">
           <span class="pill" :class="p.status === '已发车' ? 'done' : 'wait'">{{ p.status }}</span>
@@ -83,10 +84,11 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { planApi, batchApi } from '../api'
+import { planApi, batchApi, bagApi } from '../api'
 
 const rows = ref([])
 const batches = ref([])
+const bags = ref([])
 const visible = ref(false)
 const form = ref({})
 
@@ -100,11 +102,18 @@ function batchCode(id) {
   const hit = batches.value.find((b) => b.id === id)
   return hit ? hit.code : id
 }
+function bagSummary(planId) {
+  const onPlan = bags.value.filter((t) => t.loadPlanId === planId)
+  const active = onPlan.filter((t) => t.status !== '已拆除')
+  const pieces = active.reduce((s, t) => s + t.quantity, 0)
+  return `${active.length} 个 / ${pieces} 件`
+}
 
 async function load() {
   try {
-    const list = await planApi.list({})
+    const [list, bagList] = await Promise.all([planApi.list({}), bagApi.list({})])
     rows.value = [...list].sort((a, b) => String(b.loadDate).localeCompare(String(a.loadDate)))
+    bags.value = bagList
   } catch (e) {
     ElMessage.error(e.message)
   }
@@ -264,6 +273,11 @@ onMounted(async () => {
 .load {
   font-size: 11px;
   color: #a8abb2;
+  margin-top: 3px;
+}
+.bags {
+  font-size: 11px;
+  color: var(--el-color-primary);
   margin-top: 3px;
 }
 .pill {

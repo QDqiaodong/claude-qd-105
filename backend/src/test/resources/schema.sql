@@ -1,0 +1,62 @@
+CREATE TABLE IF NOT EXISTS chute (
+  id BIGINT NOT NULL AUTO_INCREMENT,
+  code VARCHAR(32) NOT NULL,
+  area VARCHAR(32) NOT NULL,
+  capacity INT NOT NULL,
+  status VARCHAR(16) NOT NULL,
+  PRIMARY KEY (id),
+  UNIQUE (code)
+);
+
+CREATE TABLE IF NOT EXISTS sort_batch (
+  id BIGINT NOT NULL AUTO_INCREMENT,
+  code VARCHAR(32) NOT NULL,
+  chute_id BIGINT NOT NULL,
+  quantity INT NOT NULL,
+  arrive_date DATE NOT NULL,
+  status VARCHAR(16) NOT NULL,
+  operator VARCHAR(32) NOT NULL,
+  PRIMARY KEY (id),
+  UNIQUE (code)
+);
+
+CREATE TABLE IF NOT EXISTS load_plan (
+  id BIGINT NOT NULL AUTO_INCREMENT,
+  code VARCHAR(32) NOT NULL,
+  batch_id BIGINT NOT NULL,
+  plate_no VARCHAR(16) NOT NULL,
+  destination VARCHAR(32) NOT NULL,
+  quantity INT NOT NULL,
+  load_date DATE NOT NULL,
+  status VARCHAR(16) NOT NULL,
+  operator VARCHAR(32) NOT NULL,
+  PRIMARY KEY (id),
+  UNIQUE (code)
+);
+
+CREATE TABLE IF NOT EXISTS transit_bag (
+  id BIGINT NOT NULL AUTO_INCREMENT,
+  code VARCHAR(32) NOT NULL,
+  chute_id BIGINT NOT NULL,
+  batch_id BIGINT NOT NULL,
+  load_plan_id BIGINT NOT NULL,
+  quantity INT NOT NULL,
+  bag_date DATE NOT NULL,
+  status VARCHAR(16) NOT NULL,
+  operator VARCHAR(32) NOT NULL,
+  PRIMARY KEY (id),
+  UNIQUE (code)
+);
+
+CREATE TABLE IF NOT EXISTS exception_item (
+  id BIGINT NOT NULL AUTO_INCREMENT,
+  code VARCHAR(32) NOT NULL,
+  batch_id BIGINT NOT NULL,
+  kind VARCHAR(16) NOT NULL,
+  description VARCHAR(255),
+  found_date DATE NOT NULL,
+  handler VARCHAR(32) NOT NULL,
+  status VARCHAR(16) NOT NULL,
+  PRIMARY KEY (id),
+  UNIQUE (code)
+);

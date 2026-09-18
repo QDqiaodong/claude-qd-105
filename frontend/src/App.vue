@@ -6,6 +6,7 @@
         <el-menu-item index="/chutes">格口台账</el-menu-item>
         <el-menu-item index="/batches">分拣批次</el-menu-item>
         <el-menu-item index="/plans">装车发运</el-menu-item>
+        <el-menu-item index="/bags">中转袋台账</el-menu-item>
         <el-menu-item index="/exceptions">异常件</el-menu-item>
       </el-menu>
     </el-aside>
