@@ -1,10 +1,11 @@
 <template>
   <el-container style="min-height: 100vh">
     <el-aside width="216px" class="app-aside">
-      <div class="app-brand">快递分拣中心 · 格口与分拣批次管理</div>
+      <div class="app-brand">快递分拣中心 · 格口 / 批次 / 中转袋与装车管理</div>
       <el-menu :default-active="route.path" router class="app-menu">
         <el-menu-item index="/chutes">格口台账</el-menu-item>
         <el-menu-item index="/batches">分拣批次</el-menu-item>
+        <el-menu-item index="/bags">中转袋</el-menu-item>
         <el-menu-item index="/plans">装车发运</el-menu-item>
         <el-menu-item index="/exceptions">异常件</el-menu-item>
       </el-menu>

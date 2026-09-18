@@ -11,4 +11,7 @@ public interface ExceptionItemRepository extends JpaRepository<ExceptionItem, Lo
     List<ExceptionItem> findByBatchId(Long batchId);
 
     List<ExceptionItem> findAllByOrderByIdDesc();
+
+    /** 该批次仍处在待处理的异常件件数（破损/错分/无面单都不许混进袋带走）。 */
+    long countByBatchIdAndStatus(Long batchId, String status);
 }

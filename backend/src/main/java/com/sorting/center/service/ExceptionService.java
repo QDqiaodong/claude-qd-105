@@ -48,7 +48,7 @@ public class ExceptionService {
         if (input.foundDate == null) {
             throw new BizException("要填发现日期");
         }
-        SortBatch batch = batches.findById(input.batchId)
+        SortBatch batch = batches.findLockById(input.batchId)
                 .orElseThrow(() -> new BizException("批次不存在"));
         ExceptionItem saved = new ExceptionItem();
         saved.code = input.code.trim();

@@ -53,7 +53,7 @@ public class ChuteService {
 
     @Transactional
     public Chute update(Long id, Chute input) {
-        Chute c = chutes.findById(id).orElseThrow(() -> new BizException("格口不存在"));
+        Chute c = chutes.findLockById(id).orElseThrow(() -> new BizException("格口不存在"));
         List<SortBatch> running = batches.findByChuteIdAndStatusNot(c.id, "已完成");
         if (input.area != null && !input.area.isBlank()) {
             c.area = input.area.trim();

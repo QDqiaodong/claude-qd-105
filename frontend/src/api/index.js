@@ -34,4 +34,11 @@ export const exceptionApi = {
   resolve: (id) => http.post(`/exceptions/${id}/resolve`)
 }
 
+export const bagApi = {
+  list: (params) => http.get('/bags', { params }),
+  open: (data) => http.post('/bags', data),
+  unpack: (id) => http.post(`/bags/${id}/unpack`),
+  remaining: (batchId) => http.get('/bags/remaining', { params: { batchId } })
+}
+
 export default http

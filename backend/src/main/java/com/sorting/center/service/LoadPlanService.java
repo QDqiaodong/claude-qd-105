@@ -71,7 +71,10 @@ public class LoadPlanService {
 
     @Transactional
     public LoadPlan depart(Long id) {
-        LoadPlan plan = plans.findById(id).orElseThrow(() -> new BizException("装车单不存在"));
+        // 锁住装车单行：若有开袋/拆袋事务正在挂这张单，先等它提交，
+        // 提交后再把状态改成已发车，保证「发车后挂上的袋」不可能存在
+        LoadPlan plan = plans.findLockById(id)
+                .orElseThrow(() -> new BizException("装车单不存在"));
         if (!"待装车".equals(plan.status)) {
             throw new BizException("这单已经发过车了");
         }
